@@ -319,4 +319,56 @@ final class HtmlDigestTest extends TestCase
         $this->assertStringNotContainsString('Page Title', $result);
         $this->assertStringNotContainsString('no js', $result);
     }
+
+    // ==================== Regression: Unicode whitespace (nbsp / full-width) ====================
+
+    public function testToTextFiltersOutNbspOnlyParagraph(): void
+    {
+        $html = '<p>a</p><p>&nbsp;</p><p>b</p>';
+        $this->assertSame("a\nb", HtmlDigest::toText($html));
+    }
+
+    public function testToTextCollapsesFullWidthSpace(): void
+    {
+        $html = '<p>你好　世界</p>';
+        $this->assertSame('你好 世界', HtmlDigest::toText($html));
+    }
+
+    public function testToTextFiltersOutWhitespaceOnlyLine(): void
+    {
+        $html = "<p>a</p><p>\t   </p><p>b</p>";
+        $this->assertSame("a\nb", HtmlDigest::toText($html));
+    }
+
+    public function testExtractCharModeBreaksOnNbsp(): void
+    {
+        $html = '<p>hello&nbsp;world&nbsp;foo</p>';
+        $this->assertSame('hello...', HtmlDigest::extract($html, 9));
+    }
+
+    public function testExtractCharModeBreaksOnFullWidthSpace(): void
+    {
+        $html = '<p>你好　世界　更多内容</p>';
+        $this->assertSame('你好...', HtmlDigest::extract($html, 6));
+    }
+
+    // ==================== Regression: CJK word mode ====================
+
+    public function testExtractWordModeCjk(): void
+    {
+        $html = '<p>这是一个中文长句测试</p>';
+        $this->assertSame('这是一个...', HtmlDigest::extract($html, 4, '...', HtmlDigest::MODE_WORD));
+    }
+
+    public function testExtractWordModeCjkWithinLimitKeepsRawText(): void
+    {
+        $html = '<p>你好世界</p>';
+        $this->assertSame('你好世界', HtmlDigest::extract($html, 4, '...', HtmlDigest::MODE_WORD));
+    }
+
+    public function testExtractWordModeCjkWithPunctuation(): void
+    {
+        $html = '<p>这是。你好</p>';
+        $this->assertSame('这是...', HtmlDigest::extract($html, 2, '...', HtmlDigest::MODE_WORD));
+    }
 }

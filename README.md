@@ -13,6 +13,8 @@ A lightweight HTML text summary extractor, based on `strip_tags` + multibyte str
 - Minimalist static API, one-line call
 - Smart truncation (does not break words)
 - Supports two truncation modes: by character count / by word count
+- CJK-aware word mode (treats each CJK character as a token)
+- Normalizes `&nbsp;` and full-width spaces as whitespace
 - Customizable ellipsis
 
 ## Installation
@@ -104,6 +106,8 @@ MIT
 - 极简静态 API，一行调用
 - 智能截断（不截断单词）
 - 支持按字符数 / 按词数两种截断模式
+- 词数模式支持中文（CJK 感知，逐字分词）
+- 将 `&nbsp;` / 全角空格视作空白并归一化
 - 自定义省略号
 
 ## 安装
