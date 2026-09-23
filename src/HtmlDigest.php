@@ -94,7 +94,8 @@ class HtmlDigest
 
     private static function lastWhitespacePos(string $text): ?int
     {
-        if (preg_match('/.*[\s\x{00A0}\x{3000}]/u', $text, $m)) {
+        // [\s\S]* crosses newlines so we find the truly last whitespace in the whole text
+        if (preg_match('/[\s\S]*[\s\x{00A0}\x{3000}]/u', $text, $m)) {
             return mb_strlen($m[0], 'UTF-8') - 1;
         }
 

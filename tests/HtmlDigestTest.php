@@ -371,4 +371,20 @@ final class HtmlDigestTest extends TestCase
         $html = '<p>这是。你好</p>';
         $this->assertSame('这是...', HtmlDigest::extract($html, 2, '...', HtmlDigest::MODE_WORD));
     }
+
+    // Regression: word-boundary rollback must find the last whitespace across
+    // newlines, not just within the first line
+    public function testExtractCharModeBreaksInLaterLine(): void
+    {
+        $html = '<p>alpha beta gamma</p><p>delta epsilon foo</p>';
+        $this->assertSame("alpha beta gamma\ndelta...", HtmlDigest::extract($html, 26));
+    }
+
+    public function testExtractCharModeNoWhitespaceAtAll(): void
+    {
+        $html = '<p>abcdefghijklmnopqrstuvwxyz</p>';
+        $result = HtmlDigest::extract($html, 10);
+        $this->assertSame(10, mb_strlen($result));
+        $this->assertStringEndsWith('...', $result);
+    }
 }
