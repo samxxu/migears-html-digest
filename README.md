@@ -189,7 +189,7 @@ Because truncation is multibyte-safe, CJK characters are never split.
 $safePreview = HtmlDigest::extract($commentHtml, length: 80);
 ```
 
-The output contains no tags and no scripts, so it can be placed into a text node without any risk of injected markup.
+The output contains no tags and no scripts — including entity-encoded ones. A `&lt;script&gt;alert(1)&lt;/script&gt;` in the input is decoded back into a real script tag *after* `strip_tags`, so it is stripped a second time together with its content. The result can be placed into a text node without any risk of injected markup.
 
 ---
 
@@ -249,10 +249,11 @@ public static function toText(string $html): string
 
 1. **Removes hidden elements and their content**: `<script>`, `<style>`, `<head>`, `<noscript>`.
 2. **Block-level closing tags → newline**: `</p>`, `</div>`, `</li>`, `</h1>`–`</h6>`, `</tr>`, `</blockquote>`, `</pre>`, `</dd>`, `</dt>`; also `<br>` → newline.
-3. **Strips all remaining tags** (`strip_tags`) and **decodes HTML entities** (`&amp;` → `&`, `&lt;` → `<`, `&nbsp;` → non-breaking space, etc.).
-4. **Normalizes each line**: trims leading/trailing whitespace, collapses runs of whitespace (including `&nbsp;` and full-width spaces) into a single space.
-5. **Drops blank lines** (lines containing only whitespace).
-6. **Trims Unicode whitespace** at the boundaries.
+3. **Strips all remaining tags** (`strip_tags`).
+4. **Decodes HTML entities** (`&amp;` → `&`, `&lt;` → `<`, `&nbsp;` → non-breaking space, etc.), then **re-strips hidden elements** that the decoding may have re-formed (e.g. `&lt;script&gt;` → `<script>`).
+5. **Normalizes each line**: trims leading/trailing whitespace, collapses runs of whitespace (including `&nbsp;` and full-width spaces) into a single space.
+6. **Drops blank lines** (lines containing only whitespace).
+7. **Trims Unicode whitespace** at the boundaries.
 
 ---
 
@@ -287,6 +288,13 @@ Both are normalized to a single ASCII space in `toText()`. This means:
 ```php
 #> HtmlDigest::extract('<p>这是一个中文长句测试</p>', 4, '...', HtmlDigest::MODE_WORD)
 #=> '这是一个...'
+```
+
+Fullwidth punctuation (e.g. `，` U+FF0C) is part of the CJK token class, so space-less Chinese with punctuation still truncates by character:
+
+```php
+#> HtmlDigest::extract('这是一个，中文长句测试', 2, '...', HtmlDigest::MODE_WORD)
+#=> '这是...'
 ```
 
 Mixed text (e.g. `Hello世界`) is kept as a single token and counted as one word.
@@ -521,7 +529,7 @@ $ogDescription = HtmlDigest::extract($shareHtml, length: 40, ellipsis: '…');
 $safePreview = HtmlDigest::extract($commentHtml, length: 80);
 ```
 
-输出不含任何标签与脚本，可直接放入文本节点，绝无注入标记的风险。
+输出不含任何标签与脚本——**包括实体编码的**。输入中的 `&lt;script&gt;alert(1)&lt;/script&gt;` 会在 `strip_tags` 之后被实体解码还原成真标签，因此会被**二次清理**连同内容一起剥除。结果可直接放入文本节点，绝无注入标记的风险。
 
 ---
 
@@ -581,10 +589,11 @@ public static function toText(string $html): string
 
 1. **移除隐藏元素及其内容**：`<script>`、`<style>`、`<head>`、`<noscript>`。
 2. **块级闭合标签 → 换行**：`</p>`、`</div>`、`</li>`、`</h1>`–`</h6>`、`</tr>`、`</blockquote>`、`</pre>`、`</dd>`、`</dt>`；`<br>` 也转成换行。
-3. **剥除其余标签**（`strip_tags`）并**解码 HTML 实体**（`&amp;` → `&`、`&lt;` → `<`、`&nbsp;` → 不间断空格等）。
-4. **逐行归一化**：去除行首行尾空白，将连续空白（含 `&nbsp;` 与全角空格）折叠为一个空格。
-5. **过滤空行**（仅含空白的行）。
-6. **修剪边界的 Unicode 空白**。
+3. **剥除其余标签**（`strip_tags`）。
+4. **解码 HTML 实体**（`&amp;` → `&`、`&lt;` → `<`、`&nbsp;` → 不间断空格等），然后**再次剥除解码可能还原出的隐藏元素**（如 `&lt;script&gt;` → `<script>`）。
+5. **逐行归一化**：去除行首行尾空白，将连续空白（含 `&nbsp;` 与全角空格）折叠为一个空格。
+6. **过滤空行**（仅含空白的行）。
+7. **修剪边界的 Unicode 空白**。
 
 ---
 
@@ -619,6 +628,13 @@ public static function toText(string $html): string
 ```php
 #> HtmlDigest::extract('<p>这是一个中文长句测试</p>', 4, '...', HtmlDigest::MODE_WORD)
 #=> '这是一个...'
+```
+
+全角标点（如 `，` U+FF0C）也属于 CJK 词元字符类，因此含标点的无空格中文同样能按字截断：
+
+```php
+#> HtmlDigest::extract('这是一个，中文长句测试', 2, '...', HtmlDigest::MODE_WORD)
+#=> '这是...'
 ```
 
 混合文本（如 `Hello世界`）整体作为一个词计数，不拆解。

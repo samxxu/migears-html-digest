@@ -51,8 +51,14 @@ final class HtmlDigestTest extends TestCase
 
     public function testToTextDecodesHtmlEntities(): void
     {
-        $html = '<p>Tom &amp; Jerry &lt;script&gt;</p>';
-        $this->assertSame('Tom & Jerry <script>', HtmlDigest::toText($html));
+        $html = '<p>Tom &amp; Jerry</p>';
+        $this->assertSame('Tom & Jerry', HtmlDigest::toText($html));
+    }
+
+    public function testToTextRemovesEntitiesThatReformHiddenElements(): void
+    {
+        $html = '<p>Tom &amp; Jerry says &lt;script&gt;alert(1)&lt;/script&gt;</p>';
+        $this->assertSame('Tom & Jerry says', HtmlDigest::toText($html));
     }
 
     public function testToTextCollapsesWhitespaceWithinLines(): void
@@ -370,6 +376,13 @@ final class HtmlDigestTest extends TestCase
     {
         $html = '<p>这是。你好</p>';
         $this->assertSame('这是...', HtmlDigest::extract($html, 2, '...', HtmlDigest::MODE_WORD));
+    }
+
+    public function testExtractWordModeCjkWithFullwidthPunctuation(): void
+    {
+        // Fullwidth comma U+FF0C lives outside the Han ideographs block; it
+        // must still count as a CJK token so word truncation keeps working
+        $this->assertSame('这是...', HtmlDigest::extract('这是一个，中文长句测试', 2, '...', HtmlDigest::MODE_WORD));
     }
 
     // Regression: word-boundary rollback must find the last whitespace across

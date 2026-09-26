@@ -13,8 +13,9 @@ class HtmlDigest
     public const MODE_CHAR = 'char';
     public const MODE_WORD = 'word';
 
-    // CJK ranges: Han ideographs, extensions, kana, CJK punctuation, compatibility
-    private const CJK = '\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{3040}-\x{30FF}\x{3000}-\x{303F}\x{F900}-\x{FAFF}';
+    // CJK ranges: Han ideographs, extensions, kana, CJK punctuation, compatibility,
+    // fullwidth forms (so fullwidth punctuation like ，U+FF0C counts as CJK)
+    private const CJK = '\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{3040}-\x{30FF}\x{3000}-\x{303F}\x{F900}-\x{FAFF}\x{FF00}-\x{FFEF}';
 
     public static function extract(
         string $html,
@@ -47,6 +48,14 @@ class HtmlDigest
 
         $text = strip_tags($html);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Entities may decode back into hidden elements (e.g. &lt;script&gt;),
+        // strip them again so no script markup survives in the output
+        $text = preg_replace(
+            '/<(script|style|head|noscript)\b[^>]*>.*?<\/\1>/is',
+            ' ',
+            $text
+        );
 
         // Normalize each line: trim + collapse whitespace (incl. nbsp / full-width space)
         $lines = explode("\n", $text);
@@ -127,7 +136,12 @@ class HtmlDigest
         return $digest . $ellipsis;
     }
 
-    // CJK text has no word separators, so treat each CJK character as one token
+    /**
+     * CJK text has no word separators, so treat each CJK character as one token.
+     *
+     * @param list<string> $words
+     * @return list<string>
+     */
     private static function expandCjkWords(array $words): array
     {
         $result = [];
