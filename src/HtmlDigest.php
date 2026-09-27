@@ -65,8 +65,13 @@ class HtmlDigest
         // stripped-down strip_tags on purpose: PHP's strip_tags also eats
         // ordinary text like "a <= b" or "i <3 u", so only real markup — a '<'
         // followed by a letter — is removed here.
+        //
+        // The '>' is not required at the end: a browser closes an unterminated
+        // tag at EOF, so "&lt;img src=x onerror=alert(1)" with no '>' would be
+        // a live <img> if the caller drops the result into a text node. \z, not
+        // $, so a trailing newline cannot stand in for the end of the string.
         $text = preg_replace('/<!--.*?-->/s', '', $text);
-        $text = preg_replace('/<\/?[a-zA-Z][^>]*>/', '', $text);
+        $text = preg_replace('/<\/?[a-zA-Z][^>]*(?:>|\z)/', '', $text);
 
         // Normalize each line: trim + collapse whitespace (incl. nbsp / full-width space)
         $lines = explode("\n", $text);

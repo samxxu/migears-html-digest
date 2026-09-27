@@ -97,6 +97,11 @@ final class HtmlDigestTest extends TestCase
             '<p>&#60;div class="y"&#62;text&#60;/div&#62;</p>',
             '<p>&lt;EM&gt;Emphasis&lt;/EM&gt;</p>',
             '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>',
+            // Unterminated: a browser closes a tag at EOF, so these are live
+            // markup too and must not survive the strip.
+            '<p>&lt;img src=x onerror=alert(1)</p>',
+            '<p>&lt;svg/onload=alert(1)</p>',
+            '<p>&lt;a href=javascript:alert(1)</p>',
         ];
 
         foreach ($inputs as $html) {
@@ -104,6 +109,17 @@ final class HtmlDigestTest extends TestCase
             $this->assertStringNotContainsString('<', $text, "tag survived: {$html}");
             $this->assertStringNotContainsString('>', $text, "tag survived: {$html}");
         }
+    }
+
+    public function testToTextStripsEncodedTagsThatAreNeverClosed(): void
+    {
+        // A missing '>' does not make the markup inert: browsers close an
+        // unterminated tag at end of input, so <img src=x onerror=...> would
+        // fire. Nothing of the tag may reach the output.
+        $this->assertSame('', HtmlDigest::toText('<p>&lt;img src=x onerror=alert(1)</p>'));
+        $this->assertSame('before', HtmlDigest::toText('<p>before &lt;svg/onload=alert(1)</p>'));
+        // Only the tag goes; text that merely contains '<' stays.
+        $this->assertSame('a < b and', HtmlDigest::toText('<p>a &lt; b and &lt;img</p>'));
     }
 
     public function testToTextKeepsAngleBracketsThatAreNotTags(): void
