@@ -49,13 +49,21 @@ class HtmlDigest
         $text = strip_tags($html);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // Entities may decode back into hidden elements (e.g. &lt;script&gt;),
-        // strip them again so no script markup survives in the output
+        // Decoding can turn entities back into markup (&lt;b&gt; -> <b>), so from
+        // here the text is HTML again and has to be stripped again — otherwise
+        // an encoded <img onerror=...> would reach the caller as a live tag.
+        //
+        // Hidden elements go first, while their tags are still there for the
+        // regex to match: their *content* has to go with them too
+        // (&lt;script&gt;alert(1)&lt;/script&gt; -> " "), and strip_tags below
+        // would keep the "alert(1)" and only drop the tags.
         $text = preg_replace(
             '/<(script|style|head|noscript)\b[^>]*>.*?<\/\1>/is',
             ' ',
             $text
         );
+        // Everything the regex above did not claim.
+        $text = strip_tags($text);
 
         // Normalize each line: trim + collapse whitespace (incl. nbsp / full-width space)
         $lines = explode("\n", $text);

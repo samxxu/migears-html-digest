@@ -17,7 +17,7 @@ Designed for the miGears framework philosophy: **minimal, dependency-free, reada
 - **PHP 8.1+**, using modern syntax (type declarations, `match`, `readonly`, arrow fns)
 - **PSR-4** autoloading, namespace `MiGears\HtmlDigest`
 - **Zero required dependencies** — only `ext-mbstring`
-- **Core class under 150 lines**, a one-line static API (`HtmlDigest::extract()`)
+- **Core class under 200 lines**, a one-line static API (`HtmlDigest::extract()`)
 - **Smart truncation** that does not cut words in half
 - **Two truncation modes**: by character count (`MODE_CHAR`) / by word count (`MODE_WORD`)
 - **CJK-aware word mode** — treats each CJK character as one token, so pure-Chinese text can be truncated
@@ -189,7 +189,7 @@ Because truncation is multibyte-safe, CJK characters are never split.
 $safePreview = HtmlDigest::extract($commentHtml, length: 80);
 ```
 
-The output contains no tags and no scripts — including entity-encoded ones. A `&lt;script&gt;alert(1)&lt;/script&gt;` in the input is decoded back into a real script tag *after* `strip_tags`, so it is stripped a second time together with its content. The result can be placed into a text node without any risk of injected markup.
+The output contains no tags and no scripts — including entity-encoded ones. Decoding runs *after* `strip_tags`, so an encoded `&lt;b&gt;` — or a `&lt;script&gt;alert(1)&lt;/script&gt;` — is re-formed into real markup and then stripped again (a hidden element going together with its content). The result can be placed into a text node without any risk of injected markup. Brackets that do not spell a tag, like the `&lt;` in `a &lt; b`, are ordinary text and survive.
 
 ---
 
@@ -250,7 +250,7 @@ public static function toText(string $html): string
 1. **Removes hidden elements and their content**: `<script>`, `<style>`, `<head>`, `<noscript>`.
 2. **Block-level closing tags → newline**: `</p>`, `</div>`, `</li>`, `</h1>`–`</h6>`, `</tr>`, `</blockquote>`, `</pre>`, `</dd>`, `</dt>`; also `<br>` → newline.
 3. **Strips all remaining tags** (`strip_tags`).
-4. **Decodes HTML entities** (`&amp;` → `&`, `&lt;` → `<`, `&nbsp;` → non-breaking space, etc.), then **re-strips hidden elements** that the decoding may have re-formed (e.g. `&lt;script&gt;` → `<script>`).
+4. **Decodes HTML entities** (`&amp;` → `&`, `&lt;` → `<`, `&nbsp;` → non-breaking space, etc.), then **re-strips the markup that decoding re-formed** (`&lt;script&gt;` → `<script>`): hidden elements first, so their content goes with them, then any remaining tags via a second `strip_tags`.
 5. **Normalizes each line**: trims leading/trailing whitespace, collapses runs of whitespace (including `&nbsp;` and full-width spaces) into a single space.
 6. **Drops blank lines** (lines containing only whitespace).
 7. **Trims Unicode whitespace** at the boundaries.
@@ -319,6 +319,7 @@ Text joined from multiple paragraphs (`toText` joins with `\n`) rolls back to th
 ## Limitations & notes
 
 - **Best-effort HTML parsing.** Because it deliberately avoids a DOM extension, it cannot reliably parse deeply malformed markup. In particular, an **unclosed `<script>`/`<style>`** tag may leak its content into the output — this is an accepted trade-off for zero DOM dependencies. Feed it well-formed HTML.
+- **Entity-encoded tags lose their bracket form.** An encoded tag *is* markup once decoded, and the tag-free guarantee above strips it, so `&lt;div class="x"&gt;` leaves only the words around it — the literal `<div class="x">` a reader would see is not preserved. Text that merely contains `<`/`>` (`a &lt; b`, `5 &gt; 3`) is not a tag and survives intact.
 - **HTML comments are stripped** by `strip_tags`.
 - **Whitespace normalization collapses runs** of spaces; if you need to preserve code indentation inside `<pre>`, `toText()` is not the right tool.
 - **`MODE_WORD`** counts CJK characters individually; English word counting is space-based.
@@ -332,7 +333,7 @@ composer install
 ./vendor/bin/phpunit --coverage-text
 ```
 
-52 tests cover `toText()` normalization, both truncation modes, CJK handling, Unicode whitespace, ellipsis edge cases, and exception paths.
+The suite covers `toText()` normalization, both truncation modes, CJK handling, Unicode whitespace, ellipsis edge cases, and exception paths — plus a general check that the output stays tag-free however the markup was encoded.
 
 ---
 
@@ -346,6 +347,8 @@ MIT
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 
+> **以下为中文版 · The Chinese version follows.**
+
 面向 PHP 8.1+ 的轻量级 HTML 文本摘要（digest）提取器。将 HTML 转化为干净的纯文本，并执行多字节安全的智能截断——**零 DOM 扩展依赖**（基于 `strip_tags` + 正则 + `mbstring`）。
 
 沿袭 miGears 框架理念：**极简、零依赖、几分钟内读完**。
@@ -357,7 +360,7 @@ MIT
 - **PHP 8.1+**，使用现代语法（类型声明、`match`、`readonly`、箭头函数）
 - 遵循 **PSR-4** 自动加载，命名空间 `MiGears\HtmlDigest`
 - **零强制依赖**——仅需 `ext-mbstring`
-- **核心类不足 150 行**，极简静态 API，一行调用（`HtmlDigest::extract()`）
+- **核心类不足 200 行**，极简静态 API，一行调用（`HtmlDigest::extract()`）
 - **智能截断**，不会把单词/文字从中间切断
 - **两种截断模式**：按字符数（`MODE_CHAR`）/ 按词数（`MODE_WORD`）
 - **中文（CJK）友好的词数模式**——把每个汉字视作一个词，纯中文文本也能截断
@@ -529,7 +532,7 @@ $ogDescription = HtmlDigest::extract($shareHtml, length: 40, ellipsis: '…');
 $safePreview = HtmlDigest::extract($commentHtml, length: 80);
 ```
 
-输出不含任何标签与脚本——**包括实体编码的**。输入中的 `&lt;script&gt;alert(1)&lt;/script&gt;` 会在 `strip_tags` 之后被实体解码还原成真标签，因此会被**二次清理**连同内容一起剥除。结果可直接放入文本节点，绝无注入标记的风险。
+输出不含任何标签与脚本——**包括实体编码的**。实体解码发生在 `strip_tags` **之后**，因此编码的 `&lt;b&gt;`（或 `&lt;script&gt;alert(1)&lt;/script&gt;`）会先被还原成真标签，再被二次剥除（隐藏元素连同其内容一起剥除）。结果可直接放入文本节点，绝无注入标记的风险。不构成标签的尖括号（如 `a &lt; b` 中的 `&lt;`）属于普通文本，会被保留。
 
 ---
 
@@ -590,7 +593,7 @@ public static function toText(string $html): string
 1. **移除隐藏元素及其内容**：`<script>`、`<style>`、`<head>`、`<noscript>`。
 2. **块级闭合标签 → 换行**：`</p>`、`</div>`、`</li>`、`</h1>`–`</h6>`、`</tr>`、`</blockquote>`、`</pre>`、`</dd>`、`</dt>`；`<br>` 也转成换行。
 3. **剥除其余标签**（`strip_tags`）。
-4. **解码 HTML 实体**（`&amp;` → `&`、`&lt;` → `<`、`&nbsp;` → 不间断空格等），然后**再次剥除解码可能还原出的隐藏元素**（如 `&lt;script&gt;` → `<script>`）。
+4. **解码 HTML 实体**（`&amp;` → `&`、`&lt;` → `<`、`&nbsp;` → 不间断空格等），然后**再次剥除解码还原出的标记**（如 `&lt;script&gt;` → `<script>`）：先剥隐藏元素（让其内容一并消失），再用一次 `strip_tags` 清掉其余标签。
 5. **逐行归一化**：去除行首行尾空白，将连续空白（含 `&nbsp;` 与全角空格）折叠为一个空格。
 6. **过滤空行**（仅含空白的行）。
 7. **修剪边界的 Unicode 空白**。
@@ -659,6 +662,7 @@ public static function toText(string $html): string
 ## 限制与注意事项
 
 - **尽力而为的 HTML 解析。** 为有意避免 DOM 扩展，它无法可靠解析深层畸形标记。尤其是**未闭合的 `<script>`/`<style>`** 可能把内部内容泄漏到输出——这是零 DOM 依赖下的取舍。请传入规范的 HTML。
+- **实体编码的标签会丢失尖括号形态。** 编码的标签一经解码就*是*标记，会被上述「无标签」保证剥除，因此 `&lt;div class="x"&gt;` 只剩下它前后的文字——读者看到的字面量 `<div class="x">` 不会被保留。仅含 `<`/`>` 的普通文本（`a &lt; b`、`5 &gt; 3`）不是标签，会完整保留。
 - **HTML 注释会被 `strip_tags` 一并剥除。**
 - **空白归一化会折叠连续空格**；若需保留 `<pre>` 内的代码缩进，`toText()` 并不适用。
 - **`MODE_WORD`** 将 CJK 字符逐字计数；英文则按空格分词。
@@ -672,7 +676,7 @@ composer install
 ./vendor/bin/phpunit --coverage-text
 ```
 
-52 个测试覆盖 `toText()` 归一化、两种截断模式、CJK 处理、Unicode 空白、省略号边界与异常路径。
+测试覆盖 `toText()` 归一化、两种截断模式、CJK 处理、Unicode 空白、省略号边界与异常路径，并有一条通用用例断言：无论标签以何种方式编码，输出都保持无标签。
 
 ---
 

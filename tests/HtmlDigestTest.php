@@ -61,6 +61,67 @@ final class HtmlDigestTest extends TestCase
         $this->assertSame('Tom & Jerry says', HtmlDigest::toText($html));
     }
 
+    public function testToTextRemovesNumericEntitiesThatReformHiddenElements(): void
+    {
+        // &#60; / &#62; are the numeric spellings of &lt; / &gt; and go through
+        // the same decode-then-strip pipeline.
+        $this->assertSame('', HtmlDigest::toText('<p>&#60;script&#62;alert(1)&#60;/script&#62;</p>'));
+    }
+
+    public function testToTextStripsOtherTagsThatEntitiesReform(): void
+    {
+        // Hidden elements are not the only markup an entity can re-form: the
+        // README promises tag-free output "including entity-encoded ones", so
+        // an encoded <b> must not survive as a live tag either.
+        $this->assertSame('bold', HtmlDigest::toText('<p>&lt;b&gt;bold&lt;/b&gt;</p>'));
+        $this->assertSame('x', HtmlDigest::toText('<p>&lt;a href=javascript:alert(1)&gt;x&lt;/a&gt;</p>'));
+    }
+
+    public function testToTextRemovesEntitiesThatReformEventHandlerTags(): void
+    {
+        $this->assertSame('', HtmlDigest::toText('<p>&lt;img src=x onerror=alert(1)&gt;</p>'));
+    }
+
+    /**
+     * The README's guarantee is general ("contains no tags … including
+     * entity-encoded ones"), but only the script case had a test — which is
+     * exactly how encoded <b>/<img>/<a> survived into the output. Assert the
+     * property itself, not one example of it.
+     */
+    public function testToTextOutputIsTagFreeForEntityEncodedTags(): void
+    {
+        $inputs = [
+            '<p>&lt;b&gt;bold&lt;/b&gt;</p>',
+            '<p>&lt;img src=x onerror=alert(1)&gt;</p>',
+            '<p>&lt;a href=javascript:alert(1)&gt;x&lt;/a&gt;</p>',
+            '<p>&#60;div class="y"&#62;text&#60;/div&#62;</p>',
+            '<p>&lt;EM&gt;Emphasis&lt;/EM&gt;</p>',
+            '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>',
+        ];
+
+        foreach ($inputs as $html) {
+            $text = HtmlDigest::toText($html);
+            $this->assertStringNotContainsString('<', $text, "tag survived: {$html}");
+            $this->assertStringNotContainsString('>', $text, "tag survived: {$html}");
+        }
+    }
+
+    public function testToTextKeepsAngleBracketsThatAreNotTags(): void
+    {
+        // Decoded brackets are only markup when they spell a tag; an ordinary
+        // comparison must not be eaten by the second strip.
+        $this->assertSame('a < b', HtmlDigest::toText('<p>a &lt; b</p>'));
+        $this->assertSame('5 > 3', HtmlDigest::toText('<p>5 &gt; 3</p>'));
+    }
+
+    public function testToTextDropsTheBracketFormOfEncodedTags(): void
+    {
+        // The price of the guarantee above, and what the README's Limitations
+        // note warns about: an encoded tag is markup, so it goes away with the
+        // markup and only the words around it survive.
+        $this->assertSame('use here', HtmlDigest::toText('<p>use &lt;div class="x"&gt; here</p>'));
+    }
+
     public function testToTextCollapsesWhitespaceWithinLines(): void
     {
         $html = '<p>hello    world   foo</p>';
@@ -399,5 +460,24 @@ final class HtmlDigestTest extends TestCase
         $result = HtmlDigest::extract($html, 10);
         $this->assertSame(10, mb_strlen($result));
         $this->assertStringEndsWith('...', $result);
+    }
+
+    // ==================== Metadata ====================
+
+    public function testVersionMatchesComposerAndReadmeBadges(): void
+    {
+        $composer = json_decode(
+            (string) file_get_contents(__DIR__ . '/../composer.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        $this->assertSame($composer['version'], HtmlDigest::VERSION);
+
+        $readme = (string) file_get_contents(__DIR__ . '/../README.md');
+        $badgeCount = substr_count($readme, 'badge/version-');
+        $this->assertGreaterThan(0, $badgeCount);
+        $this->assertSame($badgeCount, substr_count($readme, "badge/version-{$composer['version']}"));
     }
 }
