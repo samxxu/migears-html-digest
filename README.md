@@ -250,7 +250,7 @@ public static function toText(string $html): string
 1. **Removes hidden elements and their content**: `<script>`, `<style>`, `<head>`, `<noscript>`.
 2. **Block-level closing tags → newline**: `</p>`, `</div>`, `</li>`, `</h1>`–`</h6>`, `</tr>`, `</blockquote>`, `</pre>`, `</dd>`, `</dt>`; also `<br>` → newline.
 3. **Strips all remaining tags** (`strip_tags`).
-4. **Decodes HTML entities** (`&amp;` → `&`, `&lt;` → `<`, `&nbsp;` → non-breaking space, etc.), then **re-strips the markup that decoding re-formed** (`&lt;script&gt;` → `<script>`): hidden elements first, so their content goes with them, then any remaining tags via a second `strip_tags`.
+4. **Decodes HTML entities** (`&amp;` → `&`, `&lt;` → `<`, `&nbsp;` → non-breaking space, etc.), then **re-strips the markup that decoding re-formed** (`&lt;script&gt;` → `<script>`): hidden elements first, so their content goes with them, then any remaining tags and comments via a targeted regex (a `<` followed by a letter) — deliberately narrower than `strip_tags`, so ordinary text like `a &lt;= b` or `i &lt;3 u` survives.
 5. **Normalizes each line**: trims leading/trailing whitespace, collapses runs of whitespace (including `&nbsp;` and full-width spaces) into a single space.
 6. **Drops blank lines** (lines containing only whitespace).
 7. **Trims Unicode whitespace** at the boundaries.
@@ -593,7 +593,7 @@ public static function toText(string $html): string
 1. **移除隐藏元素及其内容**：`<script>`、`<style>`、`<head>`、`<noscript>`。
 2. **块级闭合标签 → 换行**：`</p>`、`</div>`、`</li>`、`</h1>`–`</h6>`、`</tr>`、`</blockquote>`、`</pre>`、`</dd>`、`</dt>`；`<br>` 也转成换行。
 3. **剥除其余标签**（`strip_tags`）。
-4. **解码 HTML 实体**（`&amp;` → `&`、`&lt;` → `<`、`&nbsp;` → 不间断空格等），然后**再次剥除解码还原出的标记**（如 `&lt;script&gt;` → `<script>`）：先剥隐藏元素（让其内容一并消失），再用一次 `strip_tags` 清掉其余标签。
+4. **解码 HTML 实体**（`&amp;` → `&`、`&lt;` → `<`、`&nbsp;` → 不间断空格等），然后**再次剥除解码还原出的标记**（如 `&lt;script&gt;` → `<script>`）：先剥隐藏元素（让其内容一并消失），再用精确正则剥除其余标签与注释（仅识别 `<` 后跟字母的标记）——刻意比 `strip_tags` 更窄，使 `a &lt;= b`、`i &lt;3 u` 这类普通文本得以保留。
 5. **逐行归一化**：去除行首行尾空白，将连续空白（含 `&nbsp;` 与全角空格）折叠为一个空格。
 6. **过滤空行**（仅含空白的行）。
 7. **修剪边界的 Unicode 空白**。

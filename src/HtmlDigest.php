@@ -55,15 +55,18 @@ class HtmlDigest
         //
         // Hidden elements go first, while their tags are still there for the
         // regex to match: their *content* has to go with them too
-        // (&lt;script&gt;alert(1)&lt;/script&gt; -> " "), and strip_tags below
-        // would keep the "alert(1)" and only drop the tags.
+        // (&lt;script&gt;alert(1)&lt;/script&gt; -> " ").
         $text = preg_replace(
             '/<(script|style|head|noscript)\b[^>]*>.*?<\/\1>/is',
             ' ',
             $text
         );
-        // Everything the regex above did not claim.
-        $text = strip_tags($text);
+        // Comments that entities re-form, then the tags themselves. This is a
+        // stripped-down strip_tags on purpose: PHP's strip_tags also eats
+        // ordinary text like "a <= b" or "i <3 u", so only real markup — a '<'
+        // followed by a letter — is removed here.
+        $text = preg_replace('/<!--.*?-->/s', '', $text);
+        $text = preg_replace('/<\/?[a-zA-Z][^>]*>/', '', $text);
 
         // Normalize each line: trim + collapse whitespace (incl. nbsp / full-width space)
         $lines = explode("\n", $text);

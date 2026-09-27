@@ -114,6 +114,16 @@ final class HtmlDigestTest extends TestCase
         $this->assertSame('5 > 3', HtmlDigest::toText('<p>5 &gt; 3</p>'));
     }
 
+    public function testToTextKeepsComparisonOperatorsInText(): void
+    {
+        // strip_tags eats "<= b" and "<3 u" (the '<' is not followed by a
+        // letter, yet PHP's strip_tags treats it as a tag); only real markup
+        // re-formed by decoding should be removed.
+        $this->assertSame('a <= b', HtmlDigest::toText('<p>a &lt;= b</p>'));
+        $this->assertSame('i <3 u', HtmlDigest::toText('<p>i &lt;3 u</p>'));
+        $this->assertSame('2 < 4', HtmlDigest::toText('<p>2 &lt; 4</p>'));
+    }
+
     public function testToTextDropsTheBracketFormOfEncodedTags(): void
     {
         // The price of the guarantee above, and what the README's Limitations
