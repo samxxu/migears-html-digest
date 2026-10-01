@@ -6,7 +6,6 @@ A lightweight HTML text summary (digest) extractor for PHP 8.1+. It turns HTML i
 
 Designed for the miGears framework philosophy: **minimal, dependency-free, readable in minutes**.
 
----
 
 > **Background**: miGears is the open-source successor of **TinyGears**, a
 > self-developed PHP framework. It was renamed and open-sourced recently because
@@ -14,7 +13,7 @@ Designed for the miGears framework philosophy: **minimal, dependency-free, reada
 
 ## Features
 
-- **PHP 8.1+**, using modern syntax (type declarations, `match`, `readonly`, arrow fns)
+- **PHP 8.1+**, using modern syntax (type declarations, `match`, arrow fns)
 - **PSR-4** autoloading, namespace `MiGears\HtmlDigest`
 - **Zero required dependencies** — only `ext-mbstring`
 - **Core class under 200 lines**, a one-line static API (`HtmlDigest::extract()`)
@@ -25,7 +24,20 @@ Designed for the miGears framework philosophy: **minimal, dependency-free, reada
 - **Customizable ellipsis** (default `...`)
 - **No DOM extension** — safe in environments where `dom`/`libxml` is unavailable or too heavy
 
----
+## Boundaries
+
+**In scope**
+
+- Turning HTML into normalized plain text via `HtmlDigest::toText()`: hidden elements (`script`/`style`/`head`/`noscript`) removed with their content, block-level tags → newlines, remaining tags stripped, entities decoded, Unicode whitespace normalized (PSR-4 under `MiGears\HtmlDigest`).
+- Multibyte-safe truncation via `HtmlDigest::extract()`: `MODE_CHAR` / `MODE_WORD`, word-boundary rollback (never cuts a word in half), a customizable ellipsis, and CJK-aware word counting.
+- Reporting invalid input via `HtmlDigestException` (`$length` ≤ 0 or an unknown `$mode`); `ext-mbstring` is the only required dependency.
+
+**Not in scope (by design)**
+
+- Full DOM-level HTML parsing — no `dom`/`libxml`; best-effort `strip_tags` + regex only, so deeply malformed markup (e.g. an unclosed `<script>`) is not reliably handled.
+- Rendering, escaping or generating HTML for output — it returns tag-free plain text; producing HTML belongs to `migears/pages`.
+- Sanitizing untrusted input for safe HTML output / XSS protection — escaping and context-aware HTML sanitization belong to `migears/security` (`Sanitizer`).
+
 
 ## Installation
 
@@ -33,7 +45,6 @@ Designed for the miGears framework philosophy: **minimal, dependency-free, reada
 composer require migears/html-digest
 ```
 
----
 
 ## Quick Start
 
@@ -58,7 +69,6 @@ echo HtmlDigest::extract($html, length: 20, ellipsis: '…');
 echo HtmlDigest::toText($html);
 ```
 
----
 
 ## Worked example: input → output
 
@@ -125,7 +135,6 @@ Watch the word boundary: `extract($html, 30)` **never** returns `"A Better Morni
 
 The `&nbsp;` inside the sentence is normalized to a space, the `°C` survives, and **word mode works on space-less Chinese** by counting each CJK character as a token.
 
----
 
 ## Real-world scenarios
 
@@ -191,7 +200,6 @@ $safePreview = HtmlDigest::extract($commentHtml, length: 80);
 
 The output contains no tags and no scripts — including entity-encoded ones. Decoding runs *after* `strip_tags`, so an encoded `&lt;b&gt;` — or a `&lt;script&gt;alert(1)&lt;/script&gt;` — is re-formed into real markup and then stripped again (a hidden element going together with its content). The result can be placed into a text node without any risk of injected markup. Brackets that do not spell a tag, like the `&lt;` in `a &lt; b`, are ordinary text and survive.
 
----
 
 ## API
 
@@ -255,7 +263,6 @@ public static function toText(string $html): string
 6. **Drops blank lines** (lines containing only whitespace).
 7. **Trims Unicode whitespace** at the boundaries.
 
----
 
 ## Truncation behavior in detail
 
@@ -314,17 +321,16 @@ Text joined from multiple paragraphs (`toText` joins with `\n`) rolls back to th
 #=> "alpha beta gamma\ndelta..."
 ```
 
----
 
 ## Limitations & notes
 
 - **Best-effort HTML parsing.** Because it deliberately avoids a DOM extension, it cannot reliably parse deeply malformed markup. In particular, an **unclosed `<script>`/`<style>`** tag may leak its content into the output — this is an accepted trade-off for zero DOM dependencies. Feed it well-formed HTML.
 - **Entity-encoded tags lose their bracket form.** An encoded tag *is* markup once decoded, and the tag-free guarantee above strips it, so `&lt;div class="x"&gt;` leaves only the words around it — the literal `<div class="x">` a reader would see is not preserved. Text that merely contains `<`/`>` (`a &lt; b`, `5 &gt; 3`) is not a tag and survives intact.
+- **A declaration or processing instruction re-formed from entities is kept as text.** `&lt;!DOCTYPE html&gt;`, `&lt;?php … ?&gt;` and `&lt;![CDATA[…]]&gt;` have no letter after the `<`, so the second strip does not read them as tags and their bracket form survives. Nothing live comes of it — a `<!DOCTYPE>` or an XML instruction in a text node is inert, and an encoded `&lt;img onerror=…&gt;` is still removed — so the guarantee above holds; the edge is that a reader sees that literal text.
 - **HTML comments are stripped** by `strip_tags`.
 - **Whitespace normalization collapses runs** of spaces; if you need to preserve code indentation inside `<pre>`, `toText()` is not the right tool.
 - **`MODE_WORD`** counts CJK characters individually; English word counting is space-based.
 
----
 
 ## Testing
 
@@ -335,7 +341,6 @@ composer install
 
 The suite covers `toText()` normalization, both truncation modes, CJK handling, Unicode whitespace, ellipsis edge cases, and exception paths — plus a general check that the output stays tag-free however the markup was encoded.
 
----
 
 ## License
 
@@ -353,11 +358,10 @@ MIT
 
 沿袭 miGears 框架理念：**极简、零依赖、几分钟内读完**。
 
----
 
 ## 特性
 
-- **PHP 8.1+**，使用现代语法（类型声明、`match`、`readonly`、箭头函数）
+- **PHP 8.1+**，使用现代语法（类型声明、`match`、箭头函数）
 - 遵循 **PSR-4** 自动加载，命名空间 `MiGears\HtmlDigest`
 - **零强制依赖**——仅需 `ext-mbstring`
 - **核心类不足 200 行**，极简静态 API，一行调用（`HtmlDigest::extract()`）
@@ -368,7 +372,20 @@ MIT
 - **自定义省略号**（默认 `...`）
 - **无需 DOM 扩展**——在无法使用 `dom`/`libxml` 或嫌其过重的环境中依然安全可用
 
----
+## 边界
+
+**范围内**
+
+- 通过 `HtmlDigest::toText()` 把 HTML 转成归一化纯文本：隐藏元素（`script`/`style`/`head`/`noscript`）连同内容一并移除、块级标签 → 换行、其余标签剥除、实体解码、Unicode 空白归一化；PSR-4 根为 `MiGears\HtmlDigest`。
+- 通过 `HtmlDigest::extract()` 做多字节安全的截断：`MODE_CHAR` / `MODE_WORD`、词边界回退（绝不切断半个词）、自定义省略号，以及中文（CJK）友好的词数计数。
+- 通过 `HtmlDigestException` 报告非法输入（`$length` ≤ 0 或未知 `$mode`）；唯一强制依赖为 `ext-mbstring`。
+
+**范围外（刻意不做）**
+
+- 完整的 DOM 级 HTML 解析 —— 不依赖 `dom`/`libxml`，仅用尽力而为的 `strip_tags` + 正则，因此对深层畸形标记（例如未闭合的 `<script>`）无法可靠处理。
+- 渲染、转义或生成用于输出的 HTML —— 只返回不含任何标签的纯文本；生成 HTML 属于 `migears/pages`。
+- 对不可信输入做安全 HTML 输出的净化 / XSS 防护 —— 转义与上下文相关的 HTML 净化属于 `migears/security`（`Sanitizer`）。
+
 
 ## 安装
 
@@ -376,7 +393,6 @@ MIT
 composer require migears/html-digest
 ```
 
----
 
 ## 快速开始
 
@@ -401,7 +417,6 @@ echo HtmlDigest::extract($html, length: 20, ellipsis: '…');
 echo HtmlDigest::toText($html);
 ```
 
----
 
 ## 完整示例：原始 HTML → 提取结果
 
@@ -468,7 +483,6 @@ Visit our full guide for details or enjoy a cup.
 
 句中的 `&nbsp;` 被归一化为空格，`°C` 得以保留，**中文在无空格的词数模式下也能截断**（每个汉字按一个词计数）。
 
----
 
 ## 实际使用场景
 
@@ -534,7 +548,6 @@ $safePreview = HtmlDigest::extract($commentHtml, length: 80);
 
 输出不含任何标签与脚本——**包括实体编码的**。实体解码发生在 `strip_tags` **之后**，因此编码的 `&lt;b&gt;`（或 `&lt;script&gt;alert(1)&lt;/script&gt;`）会先被还原成真标签，再被二次剥除（隐藏元素连同其内容一起剥除）。结果可直接放入文本节点，绝无注入标记的风险。不构成标签的尖括号（如 `a &lt; b` 中的 `&lt;`）属于普通文本，会被保留。
 
----
 
 ## API
 
@@ -598,7 +611,6 @@ public static function toText(string $html): string
 6. **过滤空行**（仅含空白的行）。
 7. **修剪边界的 Unicode 空白**。
 
----
 
 ## 截断行为详解
 
@@ -657,17 +669,16 @@ public static function toText(string $html): string
 #=> "alpha beta gamma\ndelta..."
 ```
 
----
 
 ## 限制与注意事项
 
 - **尽力而为的 HTML 解析。** 为有意避免 DOM 扩展，它无法可靠解析深层畸形标记。尤其是**未闭合的 `<script>`/`<style>`** 可能把内部内容泄漏到输出——这是零 DOM 依赖下的取舍。请传入规范的 HTML。
 - **实体编码的标签会丢失尖括号形态。** 编码的标签一经解码就*是*标记，会被上述「无标签」保证剥除，因此 `&lt;div class="x"&gt;` 只剩下它前后的文字——读者看到的字面量 `<div class="x">` 不会被保留。仅含 `<`/`>` 的普通文本（`a &lt; b`、`5 &gt; 3`）不是标签，会完整保留。
+- **由实体还原的声明或处理指令会作为文本保留。** `&lt;!DOCTYPE html&gt;`、`&lt;?php … ?&gt;` 与 `&lt;![CDATA[…]]&gt;` 在 `<` 之后并非字母，因此二次剥除不会把它们当作标签，尖括号形态得以留存。这不会产出任何活的东西——文本节点里的 `<!DOCTYPE>` 或 XML 指令是惰性的，而编码的 `&lt;img onerror=…&gt;` 仍会被移除——上述保证因此仍然成立；这条边界在于读者会看到那段字面文本。
 - **HTML 注释会被 `strip_tags` 一并剥除。**
 - **空白归一化会折叠连续空格**；若需保留 `<pre>` 内的代码缩进，`toText()` 并不适用。
 - **`MODE_WORD`** 将 CJK 字符逐字计数；英文则按空格分词。
 
----
 
 ## 测试
 
@@ -678,7 +689,6 @@ composer install
 
 测试覆盖 `toText()` 归一化、两种截断模式、CJK 处理、Unicode 空白、省略号边界与异常路径，并有一条通用用例断言：无论标签以何种方式编码，输出都保持无标签。
 
----
 
 ## License
 

@@ -148,6 +148,20 @@ final class HtmlDigestTest extends TestCase
         $this->assertSame('use here', HtmlDigest::toText('<p>use &lt;div class="x"&gt; here</p>'));
     }
 
+    public function testToTextKeepsDeclarationsThatEntitiesReformAsText(): void
+    {
+        // The other documented edge, and the reason the README's Limitations note carries it rather than the
+        // strip growing a rule for it: `<!DOCTYPE`, `<?php` and `<![CDATA[` are not tags — the second strip
+        // only removes a '<' that a letter follows — so an encoded one re-forms and stays as text. Nothing
+        // live comes out of it, which is what keeps the headline guarantee intact.
+        // 另一条被写进文档的边界，也正是 README 的「限制」条目记下它、而不让剥离为它多长一条规则的原因：
+        // `<!DOCTYPE`、`<?php`、`<![CDATA[` 都不是标签——二次剥除只移除 `<` 后面紧跟字母的那些——因此编码的这类
+        // 东西还原后会作为文本留下。它不会产出任何活的东西，总体保证因此仍然成立。
+        $this->assertSame('<!DOCTYPE html>', HtmlDigest::toText('&lt;!DOCTYPE html&gt;'));
+        $this->assertSame('<?php echo 1; ?>', HtmlDigest::toText('&lt;?php echo 1; ?&gt;'));
+        $this->assertSame('<![CDATA[x]]>', HtmlDigest::toText('&lt;![CDATA[x]]&gt;'));
+    }
+
     public function testToTextCollapsesWhitespaceWithinLines(): void
     {
         $html = '<p>hello    world   foo</p>';
@@ -505,5 +519,102 @@ final class HtmlDigestTest extends TestCase
         $badgeCount = substr_count($readme, 'badge/version-');
         $this->assertGreaterThan(0, $badgeCount);
         $this->assertSame($badgeCount, substr_count($readme, "badge/version-{$composer['version']}"));
+    }
+
+    // ==================== README claims ====================
+
+    /**
+     * The bilingual divider is the only `---` rule. Every sibling module in the
+     * workspace keeps exactly one, and a README full of section rules makes the
+     * English/Chinese boundary look like any other break.
+     */
+    public function testReadmeKeepsTheBilingualDividerAsItsOnlyRule(): void
+    {
+        $readme = (string) file_get_contents(__DIR__ . '/../README.md');
+
+        $this->assertSame(1, preg_match_all('/^---$/m', $readme));
+
+        $enTitle = strpos($readme, '# migears/html-digest');
+        $cnTitle = strpos($readme, "\n# migears/html-digest");
+        $divider = strpos($readme, "\n---\n");
+
+        $this->assertNotFalse($enTitle);
+        $this->assertNotFalse($cnTitle);
+        $this->assertNotFalse($divider);
+        $this->assertGreaterThan($enTitle, $divider);
+        $this->assertLessThan($cnTitle, $divider);
+    }
+
+    /**
+     * The README sells the module as "Core class under N lines". That claim has
+     * drifted once already (it said 150 while the file was 160), so the budget is
+     * pinned: the class may not outgrow the promise without a visible failure.
+     */
+    public function testReadmeLineBudgetCoversTheCoreClass(): void
+    {
+        $readme = (string) file_get_contents(__DIR__ . '/../README.md');
+        $source = (string) file_get_contents(__DIR__ . '/../src/HtmlDigest.php');
+
+        $this->assertSame(
+            1,
+            preg_match('/Core class under (\d+) lines/', $readme, $m),
+            'the README line-budget wording changed; update this test with it'
+        );
+
+        $budget = (int) $m[1];
+        $actual = substr_count($source, "\n");
+
+        $this->assertLessThan(
+            $budget,
+            $actual,
+            "README promises under {$budget} lines but src/HtmlDigest.php has {$actual}"
+        );
+    }
+
+    /**
+     * The feature bullet lists the modern syntax the module uses; `readonly` was
+     * listed while the class has no properties at all. A keyword the README
+     * advertises but src/ never uses is drift.
+     */
+    public function testReadmeAdvertisesOnlySyntaxTheSourceUses(): void
+    {
+        $readme = (string) file_get_contents(__DIR__ . '/../README.md');
+        $source = (string) file_get_contents(__DIR__ . '/../src/HtmlDigest.php');
+
+        foreach (['readonly', 'match', 'enum'] as $syntax) {
+            if (!str_contains($readme, $syntax)) {
+                continue;
+            }
+
+            $this->assertStringContainsString(
+                $syntax,
+                $source,
+                "README advertises `{$syntax}` but src/ does not use it"
+            );
+        }
+    }
+
+    /**
+     * A '>' inside a quoted attribute value is part of the decoded tag, not the
+     * end of it: `onclick="x > 5"` goes with the tag, and so does the rest of it.
+     * Ending the second strip at that first '>' used to shed the tail back into
+     * the text ("5\">link", "y\">z") — no '<' survived, so the tag-free headline
+     * held, but the output carried stray attribute text.
+     */
+    public function testToTextStaysTagFreeWhenADecodedAttributeContainsAngleBrackets(): void
+    {
+        $cases = [
+            '<p>&lt;img src="x&gt;y"&gt;z</p>' => 'z',
+            '<p>&lt;a title="a&gt;b"&gt;t&lt;/a&gt;</p>' => 't',
+            '<p>&lt;div class="a&gt;b"&gt;t&lt;/div&gt;</p>' => 't',
+            '<p>&lt;a href="#" onclick="x &gt; 5"&gt;link&lt;/a&gt;</p>' => 'link',
+            '<p>before &lt;span title="x&gt;y"&gt;mid&lt;/span&gt; after</p>' => 'before mid after',
+        ];
+
+        foreach ($cases as $html => $expected) {
+            $text = HtmlDigest::toText($html);
+            $this->assertStringNotContainsString('<', $text, "tag survived: {$html}");
+            $this->assertSame($expected, $text, "attribute tail left behind: {$html}");
+        }
     }
 }

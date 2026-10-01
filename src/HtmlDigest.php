@@ -66,12 +66,15 @@ class HtmlDigest
         // ordinary text like "a <= b" or "i <3 u", so only real markup — a '<'
         // followed by a letter — is removed here.
         //
+        // A quoted attribute value may hold a '>' (onclick="x > 5"): it belongs
+        // to the tag, so a quoted run is consumed before '>' is read as the end.
+        //
         // The '>' is not required at the end: a browser closes an unterminated
         // tag at EOF, so "&lt;img src=x onerror=alert(1)" with no '>' would be
         // a live <img> if the caller drops the result into a text node. \z, not
         // $, so a trailing newline cannot stand in for the end of the string.
         $text = preg_replace('/<!--.*?-->/s', '', $text);
-        $text = preg_replace('/<\/?[a-zA-Z][^>]*(?:>|\z)/', '', $text);
+        $text = preg_replace('/<\/?[a-zA-Z](?:"[^"]*"|\'[^\']*\'|[^>])*(?:>|\z)/', '', $text);
 
         // Normalize each line: trim + collapse whitespace (incl. nbsp / full-width space)
         $lines = explode("\n", $text);
