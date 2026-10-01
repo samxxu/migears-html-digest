@@ -17,19 +17,21 @@ Legend — **P0** functional or security · **P1** documentation that fails when
 
 | | |
 |---|---|
-| Unsettled | P0 0 · P1 1 · P2 0 · P3 2 · other 1 |
-| Settled | 0 of 4 |
-| Waiting on the owner | `P3-1`, `P3-2` |
-| Waiting on the reviewer | `P1-1`, `G2` |
+| Unsettled | P0 0 · P1 0 · P2 1 · P3 1 · other 0 |
+| Settled | 4 of 6 |
+| Waiting on the owner | `P3-3` |
 | Waiting on the coordinator | _nothing_ |
-| Deferred, owing nobody | _nothing_ |
+| Waiting on the reviewer | _nothing_ |
+| Deferred, owing nobody | `P2-1` |
 
 | id | level | status | title |
 |---|---|---|---|
-| [`P1-1`](issues/P1-1.md) | P1 | **fixed** | Entity-encoded non-hidden tags survive into the output: … |
-| [`P3-1`](issues/P3-1.md) | P3 | **open** | The README contains 20 `---` rules; the bilingual divider is the same … |
-| [`P3-2`](issues/P3-2.md) | P3 | **open** | `VERSION` still has zero references, and the README says 'under 150 … |
-| [`G2`](issues/G2.md) | - | **fixed** | Strict flags: `phpunit.xml.dist` currently sets none of the five. The … |
+| [`P1-1`](issues/P1-1.md) | P1 | **verified** | Entity-encoded non-hidden tags survive into the output: … |
+| [`P2-1`](issues/P2-1.md) | P2 | **deferred** | An entity-encoded declaration or processing instruction re-forms and … |
+| [`P3-1`](issues/P3-1.md) | P3 | **verified** | The README contains 20 `---` rules; the bilingual divider is the same … |
+| [`P3-2`](issues/P3-2.md) | P3 | **verified** | `VERSION` still has zero references, and the README says 'under 150 … |
+| [`P3-3`](issues/P3-3.md) | P3 | **open** | Second-pass tag-stripping regex breaks on > characters inside attribute … |
+| [`G2`](issues/G2.md) | - | **verified** | Strict flags: `phpunit.xml.dist` currently sets none of the five. The … |
 
 ## Unclosed
 
@@ -38,16 +40,14 @@ highest severity first. `waiting on` is the party who acts next, read from that 
 
 | | |
 |---|---|
-| Unclosed | **4** of 4 |
-| By status | `open` 2 · `fixed` 2 |
-| Waiting on | owner 2 · reviewer 2 |
+| Unclosed | **2** of 6 |
+| By status | `open` 1 · `deferred` 1 |
+| Waiting on | owner 1 · - 1 |
 
 | level | item | status | waiting on | title |
 |---|---|---|---|---|
-| **P1** | [`P1-1`](issues/P1-1.md) | `fixed` | reviewer | Entity-encoded non-hidden tags survive into the output: … |
-| **P3** | [`P3-1`](issues/P3-1.md) | `open` | owner | The README contains 20 `---` rules; the bilingual divider is the same … |
-| **P3** | [`P3-2`](issues/P3-2.md) | `open` | owner | `VERSION` still has zero references, and the README says 'under 150 … |
-| **-** | [`G2`](issues/G2.md) | `fixed` | reviewer | Strict flags: `phpunit.xml.dist` currently sets none of the five. The … |
+| **P2** | [`P2-1`](issues/P2-1.md) | `deferred` | - | An entity-encoded declaration or processing instruction re-forms and … |
+| **P3** | [`P3-3`](issues/P3-3.md) | `open` | owner | Second-pass tag-stripping regex breaks on > characters inside attribute … |
 
 ## Verdict
 
@@ -88,19 +88,21 @@ No test for truncate with HTML containing only tags (no text); no test for malfo
 
 | | |
 |---|---|
-| 未了结 | P0 0 · P1 1 · P2 0 · P3 2 · 其他 1 |
-| 已了结 | 0 / 4 |
-| 等负责人 | `P3-1`, `P3-2` |
-| 等评审方 | `P1-1`, `G2` |
+| 未了结 | P0 0 · P1 0 · P2 1 · P3 1 · 其他 0 |
+| 已了结 | 4 / 6 |
+| 等模块主 | `P3-3` |
 | 等协调人 | _无_ |
-| 已暂缓，不欠谁 | _无_ |
+| 等评审方 | _无_ |
+| 已暂缓，不欠谁 | `P2-1` |
 
 | id | 级别 | 状态 | 标题 |
 |---|---|---|---|
-| [`P1-1`](issues/P1-1.md) | P1 | **fixed** | 实体编码的非隐藏标签会存活到输出：toText("<p>&lt;b&gt;bold&lt;/b&gt;</p>") → … |
-| [`P3-1`](issues/P3-1.md) | P3 | **open** | README 有 20 处 --- 分隔线，中英分界与小节横线同形，边界不显眼（内容本身中英对应是完整的）。 |
-| [`P3-2`](issues/P3-2.md) | P3 | **open** | VERSION 仍零引用；README 称「不足 150 行」「52 个测试」，而源码 160 行、套件 54 个测试方法。 |
-| [`G2`](issues/G2.md) | - | **fixed** | 严格开关：`phpunit.xml.dist` … |
+| [`P1-1`](issues/P1-1.md) | P1 | **verified** | 实体编码的非隐藏标签会存活到输出：toText("<p>&lt;b&gt;bold&lt;/b&gt;</p>") → … |
+| [`P2-1`](issues/P2-1.md) | P2 | **deferred** | 被实体编码的声明或处理指令会重新成形并通过再剥离：`&lt;!DOCTYPE html&gt;`、`&lt;?php … … |
+| [`P3-1`](issues/P3-1.md) | P3 | **verified** | README 有 20 处 --- 分隔线，中英分界与小节横线同形，边界不显眼（内容本身中英对应是完整的）。 |
+| [`P3-2`](issues/P3-2.md) | P3 | **verified** | VERSION 仍零引用；README 称「不足 150 行」「52 个测试」，而源码 160 行、套件 54 个测试方法。 |
+| [`P3-3`](issues/P3-3.md) | P3 | **open** | 第二轮标签剥离正则在属性值包含 > 字符时（如 onclick="x > … |
+| [`G2`](issues/G2.md) | - | **verified** | 严格开关：`phpunit.xml.dist` … |
 
 ## 未关闭
 
@@ -109,16 +111,14 @@ No test for truncate with HTML containing only tags (no text); no test for malfo
 
 | | |
 |---|---|
-| 未关闭 | **4** / 4 |
-| 按状态 | `open` 2 · `fixed` 2 |
-| 等在谁 | 负责人 2 · 评审方 2 |
+| 未关闭 | **2** / 6 |
+| 按状态 | `open` 1 · `deferred` 1 |
+| 等在谁 | 模块主 1 · - 1 |
 
 | 级别 | 条目 | 状态 | 等在谁 | 标题 |
 |---|---|---|---|---|
-| **P1** | [`P1-1`](issues/P1-1.md) | `fixed` | 评审方 | 实体编码的非隐藏标签会存活到输出：toText("<p>&lt;b&gt;bold&lt;/b&gt;</p>") → … |
-| **P3** | [`P3-1`](issues/P3-1.md) | `open` | 负责人 | README 有 20 处 --- 分隔线，中英分界与小节横线同形，边界不显眼（内容本身中英对应是完整的）。 |
-| **P3** | [`P3-2`](issues/P3-2.md) | `open` | 负责人 | VERSION 仍零引用；README 称「不足 150 行」「52 个测试」，而源码 160 行、套件 54 个测试方法。 |
-| **-** | [`G2`](issues/G2.md) | `fixed` | 评审方 | 严格开关：`phpunit.xml.dist` … |
+| **P2** | [`P2-1`](issues/P2-1.md) | `deferred` | - | 被实体编码的声明或处理指令会重新成形并通过再剥离：`&lt;!DOCTYPE html&gt;`、`&lt;?php … … |
+| **P3** | [`P3-3`](issues/P3-3.md) | `open` | 模块主 | 第二轮标签剥离正则在属性值包含 > 字符时（如 onclick="x > … |
 
 ## 结论
 
