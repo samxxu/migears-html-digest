@@ -4,12 +4,12 @@
 > per item: a front-matter header and a thread. This file is generated from them and can be rewritten at
 > any time; edit an item, never this file.
 >
-> From the miGears Full-Module Code Review Report (5th round, 2026-09-28).
+> From the miGears Full-Module Code Review Report (6th round, 2026-10-01).
 
 | | |
 |---|---|
 | Status | **Best state** |
-| Size | src 119 lines (net) · 63 tests · 1 src file |
+| Size | src 119 lines (net) · 68 tests · 2 src files |
 
 Legend — **P0** functional or security · **P1** documentation that fails when copied · **P2** robustness · **P3** metadata and docs
 
@@ -17,9 +17,9 @@ Legend — **P0** functional or security · **P1** documentation that fails when
 
 | | |
 |---|---|
-| Unsettled | P0 0 · P1 0 · P2 1 · P3 1 · other 0 |
-| Settled | 4 of 6 |
-| Waiting on the owner | `P3-3` |
+| Unsettled | P0 0 · P1 0 · P2 1 · P3 0 · other 0 |
+| Settled | 5 of 6 |
+| Waiting on the owner | _nothing_ |
 | Waiting on the coordinator | _nothing_ |
 | Waiting on the reviewer | _nothing_ |
 | Deferred, owing nobody | `P2-1` |
@@ -30,7 +30,7 @@ Legend — **P0** functional or security · **P1** documentation that fails when
 | [`P2-1`](issues/P2-1.md) | P2 | **deferred** | An entity-encoded declaration or processing instruction re-forms and … |
 | [`P3-1`](issues/P3-1.md) | P3 | **verified** | The README contains 20 `---` rules; the bilingual divider is the same … |
 | [`P3-2`](issues/P3-2.md) | P3 | **verified** | `VERSION` still has zero references, and the README says 'under 150 … |
-| [`P3-3`](issues/P3-3.md) | P3 | **open** | Second-pass tag-stripping regex breaks on > characters inside attribute … |
+| [`P3-3`](issues/P3-3.md) | P3 | **verified** | Second-pass tag-stripping regex breaks on > characters inside attribute … |
 | [`G2`](issues/G2.md) | - | **verified** | Strict flags: `phpunit.xml.dist` currently sets none of the five. The … |
 
 ## Unclosed
@@ -40,26 +40,25 @@ highest severity first. `waiting on` is the party who acts next, read from that 
 
 | | |
 |---|---|
-| Unclosed | **2** of 6 |
-| By status | `open` 1 · `deferred` 1 |
-| Waiting on | owner 1 · - 1 |
+| Unclosed | **1** of 6 |
+| By status | `deferred` 1 |
+| Waiting on | - 1 |
 
 | level | item | status | waiting on | title |
 |---|---|---|---|---|
 | **P2** | [`P2-1`](issues/P2-1.md) | `deferred` | - | An entity-encoded declaration or processing instruction re-forms and … |
-| **P3** | [`P3-3`](issues/P3-3.md) | `open` | owner | Second-pass tag-stripping regex breaks on > characters inside attribute … |
 
 ## Verdict
 
-A tight HTML-to-text extractor with smart truncation, CJK awareness, and defense-in-depth against entity-encoded tags; nothing functional or security-level remains.
+The tag-free guarantee now holds through the second strip as well, and the declared-limitation edge is reproduced and written down in both halves.
 
 ## Fixed since the last round
 
-P1-1 confirmed fixed — second strip pass after html_entity_decode catches entity-encoded tags in both toText() and truncate() paths; G2 strict flags complete.
+P3-3 verified by mutation: the second-pass strip now consumes quoted runs, so an attribute value containing > no longer ends it early. Restoring the [^>]* form turns the module’s own test red.
 
 ## Test gaps
 
-No test for truncate with HTML containing only tags (no text); no test for malformed HTML with nested mismatched tags; no test for stripTags() second pass with > inside attribute values.
+No stress case for very long attributes or deeply nested unclosed tags; the MODE_WORD fallback under mixed whitespace is thinly covered; an unterminated <!-- comment has no test.
 
 ## Verification protocol
 
@@ -75,12 +74,12 @@ No test for truncate with HTML containing only tags (no text); no test for malfo
 > 本模块问题的概览。条目本体在 [`issues/`](issues/README.md)，一条目一文件：前置字段加讨论串。
 > 本文件由条目生成，随时可以整段重写；请改条目，不要改本文件。
 >
-> 出自 miGears 全模块代码评审报告（5th round，2026-09-28）。
+> 出自 miGears 全模块代码评审报告（6th round，2026-10-01）。
 
 | | |
 |---|---|
 | 状态 | **状态最好** |
-| 体量 | src 119 行（净）· 63 个用例 · 1 个源文件 |
+| 体量 | src 119 行（净）· 68 个用例 · 2 个源文件 |
 
 级别说明 — **P0** 功能性或安全级 · **P1** 文档照抄即错 · **P2** 健壮性 · **P3** 元数据与文档
 
@@ -88,9 +87,9 @@ No test for truncate with HTML containing only tags (no text); no test for malfo
 
 | | |
 |---|---|
-| 未了结 | P0 0 · P1 0 · P2 1 · P3 1 · 其他 0 |
-| 已了结 | 4 / 6 |
-| 等模块主 | `P3-3` |
+| 未了结 | P0 0 · P1 0 · P2 1 · P3 0 · 其他 0 |
+| 已了结 | 5 / 6 |
+| 等模块主 | _无_ |
 | 等协调人 | _无_ |
 | 等评审方 | _无_ |
 | 已暂缓，不欠谁 | `P2-1` |
@@ -101,7 +100,7 @@ No test for truncate with HTML containing only tags (no text); no test for malfo
 | [`P2-1`](issues/P2-1.md) | P2 | **deferred** | 被实体编码的声明或处理指令会重新成形并通过再剥离：`&lt;!DOCTYPE html&gt;`、`&lt;?php … … |
 | [`P3-1`](issues/P3-1.md) | P3 | **verified** | README 有 20 处 --- 分隔线，中英分界与小节横线同形，边界不显眼（内容本身中英对应是完整的）。 |
 | [`P3-2`](issues/P3-2.md) | P3 | **verified** | VERSION 仍零引用；README 称「不足 150 行」「52 个测试」，而源码 160 行、套件 54 个测试方法。 |
-| [`P3-3`](issues/P3-3.md) | P3 | **open** | 第二轮标签剥离正则在属性值包含 > 字符时（如 onclick="x > … |
+| [`P3-3`](issues/P3-3.md) | P3 | **verified** | 第二轮标签剥离正则在属性值包含 > 字符时（如 onclick="x > … |
 | [`G2`](issues/G2.md) | - | **verified** | 严格开关：`phpunit.xml.dist` … |
 
 ## 未关闭
@@ -111,26 +110,25 @@ No test for truncate with HTML containing only tags (no text); no test for malfo
 
 | | |
 |---|---|
-| 未关闭 | **2** / 6 |
-| 按状态 | `open` 1 · `deferred` 1 |
-| 等在谁 | 模块主 1 · - 1 |
+| 未关闭 | **1** / 6 |
+| 按状态 | `deferred` 1 |
+| 等在谁 | - 1 |
 
 | 级别 | 条目 | 状态 | 等在谁 | 标题 |
 |---|---|---|---|---|
 | **P2** | [`P2-1`](issues/P2-1.md) | `deferred` | - | 被实体编码的声明或处理指令会重新成形并通过再剥离：`&lt;!DOCTYPE html&gt;`、`&lt;?php … … |
-| **P3** | [`P3-3`](issues/P3-3.md) | `open` | 模块主 | 第二轮标签剥离正则在属性值包含 > 字符时（如 onclick="x > … |
 
 ## 结论
 
-一个紧凑的 HTML 文本提取器，智能截断、CJK 感知、对实体编码标签有深度防御；已无功能性或安全级问题。
+二次剥除之后「无标签」的保证同样成立，被声明为限制的那处边界已复现且写进两半文档。
 
 ## 本轮已修复确认
 
-P1-1 confirmed fixed — second strip pass after html_entity_decode catches entity-encoded tags in both toText() and truncate() paths; G2 strict flags complete.
+P3-3 verified by mutation: the second-pass strip now consumes quoted runs, so an attribute value containing > no longer ends it early. Restoring the [^>]* form turns the module’s own test red.
 
 ## 测试盲区
 
-无纯标签 HTML 的截断测试；无嵌套不匹配标签的畸形 HTML 测试；无属性内含 > 时第二轮 stripTags() 的测试。
+无超长属性或深层未闭合标签的压力用例；MODE_WORD 在空白混排下的回退覆盖很薄；未闭合的 <!-- 注释无用例。
 
 ## 验证方式
 
